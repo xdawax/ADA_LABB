@@ -7,11 +7,11 @@ use Ada.Text_IO;
 use Ada.Numerics.Float_Random;
 
 procedure cyclic_wd is
-    Message: constant String := "Cyclic scheduler";
+    	Message: constant String := "Cyclic scheduler";
         -- change/add your declarations here
-    Period_F1: Duration := 1.0; 			-- Period of procedure f1
-    Period_F3: Duration := 2.0; 			-- Period of procedure f3
-    Offset_F3: Duration := 0.5; 			-- The Phase of f3 relative f1
+	Period_F1: Duration := 1.0; 			-- Period of procedure f1
+	Period_F3: Duration := 2.0; 			-- Period of procedure f3
+	Offset_F3: Duration := 0.5; 			-- The Phase of f3 relative f1
 	Delay_Time: Duration := 0.5;			-- How long to delay f3   
 
 	Start_Time: Time := Clock; 				-- Clock at start time
@@ -35,20 +35,23 @@ procedure cyclic_wd is
 		Put_Line(Duration'Image(Clock - Start_Time));
 	end f2;
 
-	procedure f3 is 
-		Message: constant String := "f3 executing, time is now";
+
 
 	task Watchdog is
-	       -- add your task entries for communication 	
-	end Watchdog;
+	       Entry Put(Start_T : in Time); -- add your task entries for communication 	
+	end Watchdog;	
 
 	task body Watchdog is
 		begin
 		loop
-            Put_Line("WD");  -- add your task code inside this loop    
+            Accept Put(Start_T : in Time) do
+            	Put_Line("Accepted in WD");
+            end Put;    
 		end loop;
 	end Watchdog;
 
+	procedure f3 is 
+		Message: constant String := "f3 executing, time is now";
 	begin
 		Put(Message);
 		Put_Line(Duration'Image(Clock - Start_Time));
@@ -63,6 +66,7 @@ procedure cyclic_wd is
 	end f3;
 
 	begin
+	
         loop
             -- change/add your code inside this loop  
             delay until Next_F1;					-- Delay until start of next period for f3
@@ -71,7 +75,8 @@ procedure cyclic_wd is
                 Next_F1 := Next_F1 + Period_F1;		-- Set the time of the next period start for f1
             if Next_F3 < Next_F1 then				-- Check if the next period belongs to f3
 	            delay until Next_F3;				-- Delay until start of next period for f3
-    	            f3;								-- Run f3
+	            	Watchdog.Put(Next_F3);
+    	            	f3;								-- Run f3
         	        Next_F3 := Next_F3 + Period_F3;	-- Set the time of the next period start for f3
         	end if;
         end loop;									-- Run for N iterations
