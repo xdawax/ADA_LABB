@@ -5,14 +5,12 @@ use Ada.Text_IO;
 
 procedure cyclic is
     Message: constant String := "Cyclic scheduler";
-        -- change/add your declarations here
-    Period_F1: Duration := 1.0; 			-- Period of procedure f1
-    Period_F3: Duration := 2.0; 			-- Period of procedure f3
-    Offset_F3: Duration := 0.5; 			-- The Phase of f3 relative f1
-
-	Start_Time: Time := Clock; 				-- Clock at start time
-	Next_F1 : Time := Clock; 				-- The time to start procedure f1
-	Next_F3 : Time := Clock + Offset_F3; 	-- The time to start procedure f3 (f1 + offset)
+    -- change/add your declarations here
+    d: Duration := 1.0;
+	Start_Time: Time := Clock;
+	f3_delay : Duration := 0.5;
+	s: Integer := 0;
+	flip: Boolean := false;
 
 	procedure f1 is 
 		Message: constant String := "f1 executing, time is now";
@@ -36,20 +34,17 @@ procedure cyclic is
 	end f3;
 
 	begin
+
         loop
-            -- change/add your code inside this loop  
-            delay until Next_F1;					-- Delay until start of next period for f3
-                f1;									-- Run procedure f1
-                f2;									-- Run procedure f2
-                Next_F1 := Next_F1 + Period_F1;		-- Set the time of the next period start for f1
-            if Next_F3 < Next_F1 then				-- Check if the next period belongs to f3
-	            delay until Next_F3;				-- Delay until start of next period for f3
-    	            f3;								-- Run f3
-        	        Next_F3 := Next_F3 + Period_F3;	-- Set the time of the next period start for f3
-        	end if;
-        end loop;									-- Run for N iterations
+			f1;
+			f2;
+			if (flip) then
+				delay until Clock + f3_delay;
+					f3;
+			end if;
+			flip := not flip;
+			Put_Line("----");	
+            delay d;
+        end loop;
 end cyclic;
 
-
---    Explain the difference between relative delay and absolute delay using your own understanding.
---    Suppose we know the exact execution times of F1, F2 and F3. Is it possible to use relative delay for avoiding drift? Why?
