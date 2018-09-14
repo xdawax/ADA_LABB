@@ -11,11 +11,9 @@ use Ada.Numerics.Float_Random;
 
 -- add packages to use randam number generator
 
-
 procedure cyclic_wd is
     Message: constant String := "Cyclic scheduler with watchdog";
-        -- change/add your declarations here
-    	Period_f1: Duration := 1.0;
+    Period_f1: Duration := 1.0;
 	Period_f3: Duration := 2.0;
 	Offset_f3: Duration := 0.5;
 	G: Generator;
@@ -48,17 +46,17 @@ procedure cyclic_wd is
 		begin
 		loop
 			accept Get do
-				Put_Line("Got Watchdog!");
+				Put_Line("WD: Got Watchdog!");
 			end Get;
 			select 
 					accept Release do
-						Put_Line("Released Watchdog!");
+						Put_Line("WD: Released Watchdog!");
 					end Release;
 				or
 					delay 0.5;
-					Put_Line("F3 has broken its deadline!");
+						Put_Line("WD: f3 has broken its deadline!");
 					accept Release do 
-						Put_Line("Released Watchdog!");
+						Put_Line("WD: Released Watchdog!");
 					end Release;
 			end select;
 		end loop;
@@ -66,22 +64,22 @@ procedure cyclic_wd is
 
 	procedure f3 is 
 		Message: constant String := "f3 executed, time is now";
+		Delay_Message: constant String := ". Execution time was";
 	begin
 		random_delay := Duration(Random(G));
 		delay random_delay;
-		Put_Line((Duration'Image(random_delay)));
 		Put(Message);
-		Put_Line(Duration'Image(Clock - Start_Time));
+		Put(Duration'Image(Clock - Start_Time));
+		Put(Delay_Message);
+		Put_Line((Duration'Image(random_delay)));
 	end f3;
-	
-
 
 	begin
 	Reset(G);	
         loop
 		delay until Next_f1;
-              	f1;
-              	f2;
+            f1;
+            f2;
 	      	Next_f1 := Next_f1 + Period_f1;
 		if Next_f3 < Next_f1 then 
 			delay until Next_f3;
