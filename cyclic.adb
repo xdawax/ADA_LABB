@@ -9,7 +9,6 @@ procedure cyclic is
     d: Duration := 1.0;
 	Start_Time: Time := Clock;
 	f3_delay : Duration := 0.5;
-	s: Integer := 0;
 	flip: Boolean := false;
 
 	procedure f1 is 
