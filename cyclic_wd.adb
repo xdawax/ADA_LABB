@@ -18,7 +18,8 @@ procedure cyclic_wd is
 	Offset_f3: Duration := 0.5;
 	G: Generator;
 	random_delay: Duration;
-
+    Resync: Boolean := false;
+    Sync_Offset : Duration;
 	Start_Time: Time := Clock;
 	Next_f1: Time := Clock;
 	Next_f3: Time := Clock + Offset_f3;
@@ -49,12 +50,13 @@ procedure cyclic_wd is
 				Put_Line("WD: Got Watchdog!");
 			end Get;
 			select 
-					accept Release do
+					accept Release do -- This will execute if f3 does not overshoot its deadline
 						Put_Line("WD: Released Watchdog!");
 					end Release;
 				or
-					delay 0.5;
+					delay 0.5; -- Otherwise this will run
 						Put_Line("WD: f3 has broken its deadline!");
+						Resync := true; -- Prepare to resynchronize
 					accept Release do 
 						Put_Line("WD: Released Watchdog!");
 					end Release;
@@ -78,15 +80,22 @@ procedure cyclic_wd is
 	Reset(G);	
         loop
 		delay until Next_f1;
-            f1;
-            f2;
-	      	Next_f1 := Next_f1 + Period_f1;
+            	f1;
+            	f2;
+	      	Next_f1 := Next_f1 + Period_f1; -- Set next time f1 will fire
 		if Next_f3 < Next_f1 then 
 			delay until Next_f3;
 			Watchdog.Get;
 			f3;
 			Watchdog.Release;
-			Next_f3 := Next_f3 + Period_f3;
+			if (Resync) then -- Will run if f3 overshot deadline
+				Sync_Offset := Duration(Integer(Clock - Start_Time) + 1); -- Get the next whole second
+				next_f1 := Start_Time + Sync_Offset; -- Set the next time f1 will fire to the next whole second
+				Next_f3 := Next_f1 + Period_f3 + Offset_f3; -- Set f3 to fire one period after the next instance of f1
+				Resync := false;
+			else 
+				Next_f3 := Next_f3 + Period_f3;
+			end if;
 		end if;
 	      	Put_Line("---");
         end loop;
