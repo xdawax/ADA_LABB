@@ -1,0 +1,120 @@
+
+with Ada.Calendar;
+with Ada.Text_IO;
+with Ada.Numerics.Float_random;
+with Ada.Numerics.Discrete_Random;
+use Ada.Calendar;
+use Ada.Text_IO;
+
+procedure comm1 is
+    Message: constant String := "Process communication";
+	task buffer is
+            entry put_a(x :in integer);
+            entry get_a(x :out integer);
+            entry done;
+	end buffer;
+
+	task producer is
+            entry done;
+	end producer;
+
+	task consumer is
+            -- add your task entries for communication 
+	end consumer;
+
+	task body buffer is 
+		Message: constant String := "buffer executing";
+                type buff_Arr is array(1..10) of Integer;
+		Arr : buff_Arr;
+		size : integer :=1;
+                status : boolean := false;  
+	begin
+		Put_Line(Message);
+		loop
+                    while not status loop
+			select
+			 when size <= arr'length =>
+                          accept put_a(x : in integer) do
+				arr(size) := x;
+				size := size + 1;
+			  end put_a;
+			 or
+		          accept done do
+			     status := true;
+			  end done;
+			or
+	                when size > 1  =>
+			  accept get_a(x : out integer) do
+			     x := arr(1);
+			     size := size -1;
+			     arr := arr(2..10) & 0;
+                          end get_a;
+			end select;
+			end loop;
+		end loop;
+	end buffer;
+
+	task body producer is 
+		Message: constant String := "producer executing";
+                subtype r is integer range 0..25;
+		package random_input is new Ada.Numerics.Discrete_Random(R);
+		use random_input;	
+		D : Duration := 0.0;
+		input_r : r;
+		G : Generator;
+		Status : Boolean := false;
+	begin
+		Put_Line(Message);
+		Reset(G);
+		loop
+                	while not status loop
+			  D := Duration(Random(G)/10);
+			select
+			  accept done do
+			   status := true;
+			  end done;
+			or
+			  delay d;
+			  input_r := random(g);
+			  Put("In");
+			  Put_Line(INteger'Image(input_r));
+                          buffer.put_a(input_r);
+                        end select;
+		end loop;
+      		end loop;
+	end producer;
+
+	task body consumer is 
+		Message: constant String := "consumer executing";
+                use Ada.Numerics.Float_random;
+		D : Duration := 0.0;
+		G : Generator;
+		sum, v : integer := 0;
+	begin
+		Put_Line(Message);
+		Reset(G);
+		Main_Cycle:
+		loop 
+                   while sum < 100 loop
+			d:= duration(Random(g));
+			delay d;
+			buffer.get_a(v);
+			sum :=sum + v;
+			put("out:");
+			put_line(INteger'Image(v));
+		   end loop;
+		end loop Main_Cycle; 
+                producer.done;  
+                buffer.done;  
+		exception
+			  when TASKING_ERROR =>
+				  Put_Line("Buffer finished before producer");
+		Put_Line("Ending the consumer");
+                
+                
+
+		
+	end consumer;
+begin
+	Put_Line(Message);
+end comm1;
