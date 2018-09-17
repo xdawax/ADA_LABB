@@ -1,83 +1,98 @@
 with Ada.Calendar;
 with Ada.Text_IO;
-with Ada.Numerics.Float_Random;
-
 use Ada.Calendar;
 use Ada.Text_IO;
-use Ada.Numerics.Float_Random;
+with Ada.Numerics.Discrete_Random;
 
-procedure cyclic_wd is
+procedure wdcyclic is
     Message: constant String := "Cyclic scheduler";
-        -- change/add your declarations here
-    Period_F1: Duration := 1.0; 			-- Period of procedure f1
-    Period_F3: Duration := 2.0; 			-- Period of procedure f3
-    Offset_F3: Duration := 0.5; 			-- The Phase of f3 relative f1
-	Delay_Time: Duration := 0.5;			-- How long to delay f3   
-
-	Start_Time: Time := Clock; 				-- Clock at start time
-	Next_F1 : Time := Clock; 				-- The time to start procedure f1
-	Next_F3 : Time := Clock + Offset_F3; 	-- The time to start procedure f3 (f1 + offset)
-
-	Seed : Generator;						-- Create a seed for randomizer
-	Prob : Float := 0.3;					-- Set probobility of delay in f3 range (0,1)
-
+    d: Duration := 1.0;
+    F1_Next : Time := Clock;
+    F3_Period : Time := Clock + d;
+    F3_Next : Time := F3_Period + 0.5 ;
+    Start_Time: Time := Clock;
+   package Random_Execution_Time is new Ada.Numerics.Discrete_Random(Boolean);
+   use Random_Execution_Time;
+   G : Generator;
+   Reset_F1: Duration := 0.0 ;
+  
+         -- change/add your declarations here
+    
 	procedure f1 is 
-		Message: constant String := "f1 executing, time is now";
+		Message: constant String := "F1 executing, time is now";
 	begin
 		Put(Message);
 		Put_Line(Duration'Image(Clock - Start_Time));
 	end f1;
-
-	procedure f2 is 
-		Message: constant String := "f2 executing, time is now";
+        
+	
+	
+        procedure f2 is 
+		Message: constant String := "F2 executing, time is now";
 	begin
 		Put(Message);
 		Put_Line(Duration'Image(Clock - Start_Time));
 	end f2;
-
+        
+	
+	
+	
 	procedure f3 is 
-		Message: constant String := "f3 executing, time is now";
-
-	task Watchdog is
-	       -- add your task entries for communication 	
-	end Watchdog;
-
-	task body Watchdog is
-		begin
-		loop
-            Put_Line("WD");  -- add your task code inside this loop    
-		end loop;
-	end Watchdog;
-
+		Message: constant String := "F3 executing,time is now";
 	begin
-		Put(Message);
-		Put_Line(Duration'Image(Clock - Start_Time));
-
-		Reset(Seed);
-
-		if Random(Seed) < Prob then					-- Delay of Delay_Time with probability Prob			
-			delay Delay_Time;				
-			Put_Line("Delayed in f3");				--
-		end if;
-
-	end f3;
-
-	begin
+		PuT(Message);		
+                Put_Line(Duration'Image(Clock - Start_Time));
+        end f3;    
+               
+   	Task Watchdog is        
+	  entry Start;
+	  entry Stop;
+         end Watchdog;
+		
+		
+	task body Watchdog is     
+             WD_Status : Boolean := False;   --Status of WatchDog
+         begin
+                loop
+                    select
+                          accept Start do 
+                   		 Put_Line("Rawr! WatchDog is screening!");  --WD is running
+                   		 WD_Status := True;
+                  	  end Start;
+		    or
+		   	 accept Stop do
+                    		Put_Line("..zzZZZzz..");     --WD is stopped
+                    		WD_Status := False;
+   	                  end Stop;
+ 	            or
+                          delay 0.5;
+		    		if WD_Status = True then   --If WD/F3 is running for more than 0.5 seconds from its start
+                                     Put_Line("WatchDog says F3 has wandered away! ");
+                                end if;
+                    end select;
+                end loop;
+          end Watchdog;
+                   
+  
+	
+begin
         loop
-            -- change/add your code inside this loop  
-            delay until Next_F1;					-- Delay until start of next period for f3
-                f1;									-- Run procedure f1
-                f2;									-- Run procedure f2
-                Next_F1 := Next_F1 + Period_F1;		-- Set the time of the next period start for f1
-            if Next_F3 < Next_F1 then				-- Check if the next period belongs to f3
-	            delay until Next_F3;				-- Delay until start of next period for f3
-    	            f3;								-- Run f3
-        	        Next_F3 := Next_F3 + Period_F3;	-- Set the time of the next period start for f3
-        	end if;
-        end loop;									-- Run for N iterations
-end cyclic_wd;
-
-
---    How did you synchronize the watchdog task with the start and the end of a F3 execution?
---    Does it make sense to use absolute delay in watchdog timeouts? Why/why not?
---    Explain the way you re-synchronize the cyclic executive when F3 misses its deadline.
+            -- change/add your code inside this loop
+             delay until F1_Next;   
+             f1;f2;
+             F1_Next := Clock + d;     --Calculate the starting time for next instance of F1
+             if F3_Next < F1_Next then  --Check if F1 has finished twice before the start of F3
+                delay until F3_Next;     --Delay until the start of F3 
+                Watchdog.Start;          --Call WD to start
+                 Reset(G);
+		if Random(G) then      -- Loop to randomize the execution time of F3 by 0.6 seconds
+		     delay until Clock + 0.6;  
+                     Reset_F1 := Duration(Float'Ceiling(Float(Clock - Start_Time))); --Reset F1 to the next whole second after F3 runs
+                     F1_Next := Start_Time + Reset_F1; 
+		end if;
+                f3;
+                Watchdog.Stop;
+                F3_Next := F1_Next + 1.5;  --Calculate the starting time for next instance of F1
+              end if;        
+        end loop;
+end wdcyclic;
