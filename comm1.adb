@@ -46,7 +46,7 @@ procedure comm1 is
       subtype Q_Range is Positive range 1 .. Q_Size;
       Length : Natural range 0 .. Q_Size := 0;
       Head, Tail : Q_Range := 1;
-      Accept_Message: constant String := "Buffer: accepted";
+      -- Accept_Message: constant String := "Buffer: accepted";
       Data : array (Q_Range) of Integer;
       Kill_Flag: Boolean := False;
    begin
@@ -55,9 +55,9 @@ procedure comm1 is
 	 select
 	    when Length < Q_Size =>
 	       accept Insert (number : in Integer) do
-		  Put(Accept_Message);
-		  Put_Line(Integer'Image(number));
-		  Data(Tail) := number;
+	       -- Put(Accept_Message);
+	       -- Put_Line(Integer'Image(number));
+	       Data(Tail) := number;
 	       end Insert;
 	       Tail := Tail mod Q_Size + 1;
 	       Length := Length + 1;
@@ -92,10 +92,9 @@ procedure comm1 is
 	 select
 	    delay Random_Delay(2);
 	    value := Random_Buffer_Item;
-	    Buffer.Insert(value);
 	    Put(Insert_Message);
 	    Put_Line(Integer'Image(value));
-
+	    Buffer.Insert(value);
 	 or 
 	    accept Kill do
 	       Kill_Flag := True;
