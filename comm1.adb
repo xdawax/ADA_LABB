@@ -5,19 +5,24 @@ with Ada.Text_IO;
 with Ada.Numerics.Discrete_Random;
 use Ada.Calendar;
 use Ada.Text_IO;
+with Ada.Numerics.Float_Random;
+use Ada.Numerics.Float_Random;
 
 procedure comm1 is
     Message: constant String := "Process communication";
+   G: Generator;
+   subtype Buffer_Item is Integer range 0 .. 25;
 	task buffer is
-            -- add your task entries for communication 
+      entry Insert(number: in Integer);
+      entry Remove(number: out Integer);
+      entry Kill;
 	end buffer;
 
 	task producer is
-            -- add your task entries for communication  
+      entry Kill;
 	end producer;
 
 	task consumer is
-            -- add your task entries for communication 
 	end consumer;
 
    function Random_Integer(min: Integer; max: Integer) return Integer is
