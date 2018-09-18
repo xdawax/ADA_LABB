@@ -82,11 +82,29 @@ procedure comm1 is
 
 	task body producer is 
 		Message: constant String := "producer executing";
-                -- change/add your local declarations here
+      Insert_Message: constant String := "inserted";
+      value: Buffer_Item;
+      Kill_Flag: Boolean := False;
 	begin
 		Put_Line(Message);
 		loop
-                -- add your task code inside this loop  
+	 select
+	    delay Random_Delay(1);
+	    value := Random_Buffer_Item;
+	    Buffer.Insert(value);
+	    Put(Insert_Message);
+	    Put_Line(Integer'Image(value));
+	 or 
+	    accept Kill do
+	       Kill_Flag := True;
+	    end Kill;
+	 end select;
+	 
+	 if (Kill_Flag) then
+	    Put_Line("producer was killed");
+	    exit;
+	 end if;
+	 
 		end loop;
 	end producer;
 
