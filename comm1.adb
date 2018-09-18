@@ -110,20 +110,36 @@ procedure comm1 is
 
 	task body consumer is 
 		Message: constant String := "consumer executing";
-                -- change/add your local declarations here
+      Remove_Message: constant String := "removed";
+      Sum_Message: constant String := " | sum is now";
+      value: Integer;
+      Sum: Integer := 0;
 	begin
 		Put_Line(Message);
 		Main_Cycle:
 		loop 
-                -- add your task code inside this loop 
+	 delay Random_Delay(1);
+	 Buffer.Remove(value);
+	 sum := sum + value;
+	 Put(Remove_Message);
+	 Put(Integer'Image(value));
+	 Put(Sum_Message);
+	 Put_Line(Integer'Image(sum));
+	 if (sum > 100) then
+	    exit Main_Cycle;
+	 end if;
 		end loop Main_Cycle; 
 
-                -- add your code to stop executions of other tasks     
+      producer.Kill;
+      buffer.Kill;
+
 		exception
 			  when TASKING_ERROR =>
 				  Put_Line("Buffer finished before producer");
 		Put_Line("Ending the consumer");
 	end consumer;
+
 begin
+   Reset(G);
 	Put_Line(Message);
 end comm1;
