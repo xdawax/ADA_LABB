@@ -41,11 +41,12 @@ procedure comm1 is
    end Random_Delay;
 
    task body buffer is -- Cyclic buffer code from https://en.wikibooks.org/wiki/Ada_Programming/Tasking
-      Message: constant String := "buffer executing";
+      Message: constant String := "Buffer: executing";
       Q_Size : constant := 10;
       subtype Q_Range is Positive range 1 .. Q_Size;
       Length : Natural range 0 .. Q_Size := 0;
       Head, Tail : Q_Range := 1;
+      Accept_Message: constant String := "Buffer: accepted";
       Data : array (Q_Range) of Integer;
       Kill_Flag: Boolean := False;
    begin
@@ -54,6 +55,8 @@ procedure comm1 is
 	 select
 	    when Length < Q_Size =>
 	       accept Insert (number : in Integer) do
+		  Put(Accept_Message);
+		  Put_Line(Integer'Image(number));
 		  Data(Tail) := number;
 	       end Insert;
 	       Tail := Tail mod Q_Size + 1;
@@ -70,9 +73,8 @@ procedure comm1 is
 	       Kill_Flag := True;
 	    end Kill;
 	 end select;
-	 
 	 if (Kill_Flag) then
-	    Put_Line("buffer was killed");
+	    Put_Line("Buffer: shutting down");
 	    exit;
 	 end if;
 
@@ -80,19 +82,20 @@ procedure comm1 is
    end buffer;
 
    task body producer is 
-      Message: constant String := "producer executing";
-      Insert_Message: constant String := "inserted";
+      Message: constant String := "Producer: executing";
+      Insert_Message: constant String := "Producer: inserted";
       value: Buffer_Item;
       Kill_Flag: Boolean := False;
    begin
       Put_Line(Message);
       loop
 	 select
-	    delay Random_Delay(1);
+	    delay Random_Delay(2);
 	    value := Random_Buffer_Item;
 	    Buffer.Insert(value);
 	    Put(Insert_Message);
 	    Put_Line(Integer'Image(value));
+
 	 or 
 	    accept Kill do
 	       Kill_Flag := True;
@@ -100,7 +103,7 @@ procedure comm1 is
 	 end select;
 	 
 	 if (Kill_Flag) then
-	    Put_Line("producer was killed");
+	    Put_Line("Producer: shutting down");
 	    exit;
 	 end if;
 	 
@@ -108,23 +111,25 @@ procedure comm1 is
    end producer;
 
    task body consumer is
-      Message: constant String := "consumer executing";
-      Remove_Message: constant String := "removed";
-      Sum_Message: constant String := " | sum is now";
+      Message: constant String := "Consumer: executing";
+      Remove_Message: constant String := "Consumer: removed";
+      Sum_Message: constant String := "Consumer: sum is now";
+      Finish_Message: constant String := "Consumer: Sum is above 100, shutting down...";
       value: Integer;
       Sum: Integer := 0;
    begin
       Put_Line(Message);
   Main_Cycle:
       loop
-	 delay Random_Delay(1);
+	 delay Random_Delay(2);
 	 Buffer.Remove(value);
 	 sum := sum + value;
 	 Put(Remove_Message);
-	 Put(Integer'Image(value));
+	 Put_Line(Integer'Image(value));
 	 Put(Sum_Message);
 	 Put_Line(Integer'Image(sum));
 	 if (sum > 100) then
+	    Put_Line(Finish_Message);
 	    exit Main_Cycle;
 	 end if;
       end loop Main_Cycle; 
