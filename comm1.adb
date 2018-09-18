@@ -20,6 +20,22 @@ procedure comm1 is
             -- add your task entries for communication 
 	end consumer;
 
+   function Random_Integer(min: Integer; max: Integer) return Integer is
+   begin
+      return Integer(Random(G) * Float(max)) + min;
+   end Random_Integer;
+
+   function Random_Buffer_Item return Buffer_Item is
+      
+   begin
+      return Buffer_Item(Random_Integer(Buffer_Item'First, Buffer_Item'Last));
+   end Random_Buffer_Item;
+
+   function Random_Delay(max: Integer) return Duration is
+   begin
+      return Duration(Random_Integer(max, 1));
+   end Random_Delay;
+
    task body buffer is -- Cyclic buffer code from https://en.wikibooks.org/wiki/Ada_Programming/Tasking
 		Message: constant String := "buffer executing";
       Q_Size : constant := 10;
