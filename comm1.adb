@@ -8,21 +8,21 @@ with Ada.Numerics.Float_Random;
 use Ada.Numerics.Float_Random;
 
 procedure comm1 is
-    Message: constant String := "Process communication";
+   Message: constant String := "Process communication";
    G: Generator;
    subtype Buffer_Item is Integer range 0 .. 25;
-	task buffer is
+   task buffer is
       entry Insert(number: in Integer);
       entry Remove(number: out Integer);
       entry Kill;
-	end buffer;
+   end buffer;
 
-	task producer is
+   task producer is
       entry Kill;
-	end producer;
+   end producer;
 
-	task consumer is
-	end consumer;
+   task consumer is
+   end consumer;
 
    function Random_Integer(min: Integer; max: Integer) return Integer is
    begin
@@ -41,16 +41,16 @@ procedure comm1 is
    end Random_Delay;
 
    task body buffer is -- Cyclic buffer code from https://en.wikibooks.org/wiki/Ada_Programming/Tasking
-		Message: constant String := "buffer executing";
+      Message: constant String := "buffer executing";
       Q_Size : constant := 10;
       subtype Q_Range is Positive range 1 .. Q_Size;
       Length : Natural range 0 .. Q_Size := 0;
       Head, Tail : Q_Range := 1;
       Data : array (Q_Range) of Integer;
       Kill_Flag: Boolean := False;
-	begin
-		Put_Line(Message);
-		loop
+   begin
+      Put_Line(Message);
+      loop
 	 select
 	    when Length < Q_Size =>
 	       accept Insert (number : in Integer) do
@@ -76,17 +76,17 @@ procedure comm1 is
 	    exit;
 	 end if;
 
-		end loop;
-	end buffer;
+      end loop;
+   end buffer;
 
-	task body producer is 
-		Message: constant String := "producer executing";
+   task body producer is 
+      Message: constant String := "producer executing";
       Insert_Message: constant String := "inserted";
       value: Buffer_Item;
       Kill_Flag: Boolean := False;
-	begin
-		Put_Line(Message);
-		loop
+   begin
+      Put_Line(Message);
+      loop
 	 select
 	    delay Random_Delay(1);
 	    value := Random_Buffer_Item;
@@ -104,19 +104,19 @@ procedure comm1 is
 	    exit;
 	 end if;
 	 
-		end loop;
-	end producer;
+      end loop;
+   end producer;
 
-	task body consumer is 
-		Message: constant String := "consumer executing";
+   task body consumer is
+      Message: constant String := "consumer executing";
       Remove_Message: constant String := "removed";
       Sum_Message: constant String := " | sum is now";
       value: Integer;
       Sum: Integer := 0;
-	begin
-		Put_Line(Message);
-		Main_Cycle:
-		loop 
+   begin
+      Put_Line(Message);
+  Main_Cycle:
+      loop
 	 delay Random_Delay(1);
 	 Buffer.Remove(value);
 	 sum := sum + value;
@@ -127,18 +127,18 @@ procedure comm1 is
 	 if (sum > 100) then
 	    exit Main_Cycle;
 	 end if;
-		end loop Main_Cycle; 
+      end loop Main_Cycle; 
 
       producer.Kill;
       buffer.Kill;
 
-		exception
-			  when TASKING_ERROR =>
-				  Put_Line("Buffer finished before producer");
-		Put_Line("Ending the consumer");
-	end consumer;
+   exception
+      when TASKING_ERROR =>
+	 Put_Line("Buffer finished before producer");
+	 Put_Line("Ending the consumer");
+   end consumer;
 
 begin
    Reset(G);
-	Put_Line(Message);
+   Put_Line(Message);
 end comm1;
