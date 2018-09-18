@@ -2,7 +2,6 @@
 
 with Ada.Calendar;
 with Ada.Text_IO;
-with Ada.Numerics.Discrete_Random;
 use Ada.Calendar;
 use Ada.Text_IO;
 with Ada.Numerics.Float_Random;
