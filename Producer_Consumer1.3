@@ -1,0 +1,110 @@
+with Ada.Text_io;
+with Ada.Numerics.Float_random;
+with Ada.Numerics.Discrete_Random;
+with Ada.Calendar;
+use Ada.Text_io;
+use Ada.Calendar;
+
+
+procedure prac is
+	Message: constant String := "Process communication";
+	task buffer is
+		entry push_buff(i : in Integer);
+		entry get_buff(i : out Integer);
+		entry done;
+	end buffer;
+
+	task producer is
+		entry done;
+	end producer;
+
+	task consumer is
+	end consumer;
+
+	task body buffer is
+		Message: constant String := "buffer executing";
+		type int_array is array(1..10) of Integer;
+		fifo : int_array;
+		length : Integer := 1;
+		Fin : Boolean := false;
+	begin
+		Put_Line(Message);
+			while not Fin loop 
+				select
+					when length <= fifo'Length => accept push_buff(i : in Integer) do
+						fifo(length) := i;
+						length := length + 1;
+					end push_buff;
+
+				or
+
+					when length > 1 => accept get_buff(i : out Integer) do
+						i := fifo(1);
+						fifo := fifo(2..10) & 0; 
+						length := length - 1;
+					end get_buff;
+				or
+					accept done do
+						Fin := true;
+					end done;
+				end select;
+                      end loop;
+	end buffer;
+
+
+	task body producer is
+		Message: constant String := "producer executing";
+		subtype input_range is Integer range 0..25;
+		package random_input is new Ada.Numerics.Discrete_Random(input_range);
+		use random_input;
+		Wait : Duration := 0.0;
+		input : input_range;
+		Gen : Generator;
+		Fin : Boolean := false;
+	begin
+		Put_Line(Message);
+		Reset(Gen);
+			while not Fin loop
+				Wait := Duration(Random(Gen)/10);
+				select
+					delay Wait;
+					input := Random(Gen);
+					Put("In: ");
+					Put_Line(Integer'Image(input));
+					buffer.push_buff(input);
+				or
+					
+					accept done do
+						Fin := true;
+					end done;
+				end select;
+			end loop;
+	end producer;
+
+
+	task body consumer is
+		Message: constant String := "consumer executing";
+		use Ada.Numerics.Float_random;
+		Wait : Duration := 0.0;
+		Sum, Val : Integer := 0;
+		Gen : Generator;
+	begin
+		Put_Line(Message);
+		Reset(Gen);
+			while sum < 100 loop
+				Wait := Duration(Random(Gen));
+				delay Wait;
+				buffer.get_buff(val);
+				sum := sum + val;
+				Put("Out:");
+				Put_Line(Integer'Image(val));
+				Put("Sum :");
+				Put_LIne(Integer'IMage(sum));
+			end loop;
+		producer.done;
+		buffer.done;
+
+	end consumer;
+begin
+Put_Line(Message);
+end prac;
