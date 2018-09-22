@@ -6,7 +6,7 @@ use Ada.Text_io;
 use Ada.Calendar;
 
 
-procedure prac is
+procedure comm1 is
 	Message: constant String := "Process communication";
 	task buffer is
 		entry push_buff(i : in Integer);
@@ -103,8 +103,12 @@ procedure prac is
 			end loop;
 		producer.done;
 		buffer.done;
+		exception
+			  when TASKING_ERROR =>
+				  Put_Line("Buffer finished before producer");
+		Put_Line("Ending the consumer");
 
 	end consumer;
 begin
 Put_Line(Message);
-end prac;
+end comm1;
