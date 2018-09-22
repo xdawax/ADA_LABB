@@ -93,7 +93,7 @@ procedure comm1 is
 		Put_Line(Message);
 		Reset(Gen);
 			while sum < 100 loop  --untill the total sum of integers taken out by consumer is less than 100
-				Wait := Duration(Random(Gen)); randomize the wait variable
+				Wait := Duration(Random(Gen)); --randomize the wait variable
 				delay Wait;
 				buffer.get_buff(val); -- call buffer to get the first element of FIFO
 				sum := sum + val;  --adds all the integers taken out by consumer
