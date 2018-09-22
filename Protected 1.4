@@ -46,7 +46,7 @@ procedure comm2 is
 	end consumer;
 
 	task body producer is
-		Message: constant String := "producer executing";
+		Message: constant String := "Producer executing";
 		subtype input_range is Integer range 0..25; --create a package to randomly generate numbers using the subtype
 		package random_input is new Ada.Numerics.Discrete_Random(input_range);
 		use random_input;
@@ -76,7 +76,7 @@ procedure comm2 is
 
 
 	task body consumer is
-		Message: constant String := "consumer executing";
+		Message: constant String := "Consumer executing";
 		use Ada.Numerics.Float_random;
 		Wait : Duration := 0.0; --delay time
 		Sum, Val : Integer := 0; -- sum of the integers taken out by consumer , current integer taken out by consumer
@@ -84,20 +84,20 @@ procedure comm2 is
 	begin
 		Put_Line(Message);
 		Reset(Gen);
-		Main_Cycle:
-		loop 
+		
 			while sum < 100 loop --untill the total sum of integers taken out by consumer is less than 100
 				Wait := Duration(Random(Gen)); --randomize the wait variable
 				delay Wait;
 				buffer.get_buff(val); -- call buffer to get the first element of FIFO
 				sum := sum + val; --adds all the integers taken out by consumer
-				Put("Out:");
+				Put("Consumed:");
 				Put_Line(Integer'Image(val)); --display the current consumed integer
 				Put("Sum :");
 				Put_LIne(Integer'IMage(sum)); --display the total sum so far
 			end loop;
-		end loop Main_Cycle; 
+		
 		producer.done;
+		
 		Put_Line("Ending the consumer");
 
 	end consumer;
