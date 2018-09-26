@@ -32,36 +32,34 @@ package body Tasks is
    task body MotorControlTask is
       Next_Time : Time := Clock;
       Period : Time_Span := milliseconds(100);
+      Event_ID: Integer := -1;
+      Edge_Reset: Boolean := False;
       
    begin      
-      -- task body starts here ---
-      --init part
-      --NXT.AVR.Await_Data_Available;
-      --Put_Line ("Ready");
       loop
 
 	 --Clear_Screen_Noupdate;
 	 put_noupdate("Waiting...");
-	 Newline;
-	 Event.Wait(TouchOnEvent);
-	 --Clear_Screen_Noupdate;
-	 Control_Motor (Left_Motor_Id, Speed_Half, Forward);
-	 Control_Motor (Right_Motor_Id, Speed_Half, Forward);
-
-	 Event.Wait(LightBelowEvent);
-
-	 Control_Motor (Left_Motor_Id, Speed_Stop, Brake);
-	 Control_Motor (Right_Motor_Id, Speed_Stop, Brake);
-	 Event.Wait(LightAboveEvent);
-
-	 Event.Wait(TouchOffEvent);
-	 --Control_Motor (Left_Motor_Id, Speed_Stop, Brake);
-	 --Control_Motor (Right_Motor_Id, Speed_Stop, Brake);
+	 Newline_noupdate;
 	 
-	 --put_noupdate("No Touch!");
-	 NewLine;
-
-	 Newline;
+	 Event.Wait(Event_ID);
+	 
+	 if ((Event_ID = TouchOnEvent) and (!Edge_Reset)) then
+	     put_noupdate("TouchOnEvent");
+	    Control_Motor (Left_Motor_Id, Speed_Half, Forward);
+	    Control_Motor (Right_Motor_Id, Speed_Half, Forward);
+	 elsif (Event_ID = TouchOffEvent) then
+	     put_noupdate("TouchOffEvent");
+	    Control_Motor (Left_Motor_Id, Speed_Stop, Brake);
+	    Control_Motor (Right_Motor_Id, Speed_Stop, Brake);
+	 elsif (Event_ID = LightBelowEvent) then
+	    Edge_Reset := True;
+	    Control_Motor (Left_Motor_Id, Speed_Stop, Brake);
+	    Control_Motor (Right_Motor_Id, Speed_Stop, Brake);
+	 elsif (Event_ID = LightOnEvent) then
+	    Edge_Reset := False;
+	 end if;
+	
 	 Next_Time := Next_Time + Period;
 	 delay until Next_Time;
       end loop;
@@ -80,7 +78,7 @@ package body Tasks is
       LS : Light_Sensor := make(Sensor_3, True);
       
       Last_Bumper_State: Boolean := False;
-      Last_Light_Value: Integer := 0;
+      Last_Light_Value: Integer := LS.Light_Value;
       Threshold: Integer := 30;
       
       procedure Check_Bumper is
@@ -107,6 +105,7 @@ package body Tasks is
       end Check_Bumper;
       
       procedure Check_Light_Sensor is
+	 Difference: Integer := 0;
       begin
 	 if LS.Light_Value < Threshold then
 	    NXT.Audio.Play_Tone
@@ -115,15 +114,21 @@ package body Tasks is
 	       Volume    => 70);
 	 end if;
 	 
-	 if (LS.Light_Value /= Last_Light_Value) then
+	 Difference := Last_Light_Value - LS.Light_Value;
+	 
+	 if (Difference < 0) then
+	    Difference := Difference * (-1);
+	 end if;
+	 
+	 if (Difference > 5) then
             if LS.Light_Value < Threshold then
 	       put_noupdate("Over the edge!");
 	       Newline;
 	       Event.Signal(LightBelowEvent);
-            --else
-	    --   put_noupdate("Light levels OK.");
-	    --   Newline;
-	    --   Event.Signal(LightAboveEvent);
+            else
+	       put_noupdate("Light levels OK.");
+	       Newline;
+	       Event.Signal(LightAboveEvent);
             end if;
             Last_Light_Value := LS.Light_Value;
 	 end if;
