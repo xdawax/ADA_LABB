@@ -32,7 +32,7 @@ package body Tasks is
 				       Update_Priority: in Integer);
       function Get_Driving_Command return Driving_Command;
    private
-      Command: Driving_Command := (Milliseconds(0), 0, 0);
+      Command: Driving_Command := (Milliseconds(0), 0, PRIO_IDLE);
    end Driving_Command_Manager;
    
    protected body Driving_Command_Manager is
@@ -68,50 +68,75 @@ package body Tasks is
       pragma Storage_Size (2048); --  task memory allocation --
    end DisplayTask;
    
+   task ShutdownTask is 
+      pragma Priority (System.Priority'First + 10);
+      pragma Storage_Size (2048); --  task memory allocation --
+   end ShutdownTask;
+   
    procedure Command_Motors(Speed: Integer) is 
    begin
       
       if (Speed > 0) then
-	 Control_Motor (Left_Motor_Id, Power_Percentage(Speed), Forward);
-	 Control_Motor (Right_Motor_Id, Power_Percentage(Speed), Forward);
+	 --Control_Motor (Left_Motor_Id, Power_Percentage(Speed), Forward);
+	 --Control_Motor (Right_Motor_Id, Power_Percentage(Speed), Forward);
+	 Control_Motor (Drive_Motor_Id, Power_Percentage(Speed), Forward);
       elsif (Speed < 0) then
-	 Control_Motor (Left_Motor_Id, Power_Percentage(Speed*(-1)), Backward);
-	 Control_Motor (Right_Motor_Id, Power_Percentage(Speed*(-1)), Backward);
+	 --Control_Motor (Left_Motor_Id, Power_Percentage(Speed*(-1)), Backward);
+	 Control_Motor (Drive_Motor_Id, Power_Percentage(Speed*(-1)), Backward);
       else 
-	 Control_Motor (Left_Motor_Id, Power_Percentage(0), Brake);
-	 Control_Motor (Right_Motor_Id, Power_Percentage(0), Brake);
+	 --Control_Motor (Left_Motor_Id, Power_Percentage(0), Brake);
+	 --Control_Motor (Right_Motor_Id, Power_Percentage(0), Brake);
+	 Control_Motor (Drive_Motor_Id, Power_Percentage(Speed), Brake);
       end if;
       
    end Command_Motors;
+   
+   task body ShutdownTask is 
+      Next_Time : Time := Clock;
+      Period : Time_Span := milliseconds(500);
+   begin
+      loop
+	 
+	 if NXT.AVR.Button = Power_Button then
+	    NXT.AVR.Power_Down;
+	 end if;
+	 Next_Time := Next_Time + Period;
+	 delay until Next_Time;
+      end loop;
+   end ShutdownTask;
 
    task body MotorControlTask is
       Next_Time : Time := Clock;
       Period : Time_Span := milliseconds(50);
       Command: Driving_Command;
       Speed: Integer := 0;
-      Duration: Time_Span := Milliseconds(10);
-      Expired: Boolean := False;
+      Duration: Time_Span := Milliseconds(0);
+      Started: Boolean := False;
    begin      
       loop
-	 Command := Driving_Command_Manager.Get_Driving_Command;
 	 
-   	 if (Duration < Milliseconds(0)) then
-   	    Put_Noupdate("Duration expired");
-   	    NewLine_Noupdate;
-   	    Duration := Milliseconds(0);
-   	    Command_Motors(0);
-	    Driving_Command_Manager.Change_Driving_Command(Milliseconds(0), 0, PRIO_IDLE);
-   	 else
-   	    Command := Driving_Command_Manager.Get_Driving_Command;
-   	    if (Command.Update_Priority > PRIO_IDLE) then
-   	       Put_Noupdate("Starting motors...");
-   	       NewLine_Noupdate;
-   	       Duration := Command.Duration;
-   	       Command_Motors(Command.Speed);
-   	    end if;
-   	 end if;
-	 
-   	 Duration := Duration - Period;
+	 if ( not Started) then
+	    Command := Driving_Command_Manager.Get_Driving_Command;
+	    if ((Command.Update_Priority > PRIO_IDLE) and (Command.Duration > Milliseconds(0))) then
+	       Started := True;
+	       Duration := Command.Duration;
+	       Put_Noupdate("Starting motors...");
+	       NewLine_Noupdate;
+	       Command_Motors(Command.Speed);
+	    end if;
+	 else
+	    if (Duration < Milliseconds(0)) then
+	       Put_Noupdate("Duration expired");
+	       NewLine_Noupdate;
+	       Started := False;
+	       Command_Motors(0);
+	       Driving_Command_Manager.Change_Driving_Command(Milliseconds(0), 0, PRIO_IDLE);
+	       Duration := Milliseconds(10);
+	    else
+	       Duration := Duration - Period;
+	    end if;
+	    
+	 end if;	 
 	 
    	 Next_Time := Next_Time + Period;
    	 delay until Next_Time;
@@ -123,10 +148,9 @@ package body Tasks is
    task body ButtonControlTask is
       Next_Time: Time := Clock;
       Period: Time_Span := milliseconds(10);
-      Bumper: Touch_Sensor (Sensor_1);
+      Bumper: Touch_Sensor (Sensor_2);
       Command: Driving_Command;
    begin
-      --NXT.AVR.Await_Data_Available;
       Put_Line("ButtonControlTask ready");
       loop
 	 
