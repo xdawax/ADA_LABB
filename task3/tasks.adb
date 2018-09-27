@@ -6,6 +6,8 @@ with ADA.Real_time;		use ADA.Real_time;
 with NXT.Audio;
 with NXT.Light_Sensors;		use NXT.Light_Sensors;
 with NXT.Light_Sensors.Ctors;	use NXT.Light_Sensors.Ctors;
+with NXT.Ultrasonic_Sensors;    use NXT.Ultrasonic_Sensors;
+with NXT.Ultrasonic_Sensors.Ctors; use NXT.Ultrasonic_Sensors.Ctors;
 with NXT.Touch_Sensors; use NXT.Touch_Sensors;
 package body Tasks is
 
@@ -70,26 +72,61 @@ package body Tasks is
    
    task ShutdownTask is 
       pragma Priority (System.Priority'First + 10);
-      pragma Storage_Size (2048); --  task memory allocation --
+      pragma Storage_Size (1024); --  task memory allocation --
    end ShutdownTask;
    
+   task DistanceTask is 
+      pragma Priority (System.Priority'First + 5);
+      pragma Storage_Size (1024); --  task memory allocation --
+   end DistanceTask;
+   
+   
    procedure Command_Motors(Speed: Integer) is 
+      Current_Speed: Integer;
    begin
+      Current_Speed := Speed;
+      if (Current_Speed > Integer(Power_Percentage'Last)) then
+	 Current_Speed := Integer(Power_Percentage'Last);
+      end if;
       
-      if (Speed > 0) then
-	 --Control_Motor (Left_Motor_Id, Power_Percentage(Speed), Forward);
-	 --Control_Motor (Right_Motor_Id, Power_Percentage(Speed), Forward);
-	 Control_Motor (Drive_Motor_Id, Power_Percentage(Speed), Forward);
-      elsif (Speed < 0) then
-	 --Control_Motor (Left_Motor_Id, Power_Percentage(Speed*(-1)), Backward);
-	 Control_Motor (Drive_Motor_Id, Power_Percentage(Speed*(-1)), Backward);
+      if (Current_Speed > 0) then
+	 --Control_Motor (Left_Motor_Id, Power_Percentage(Current_Speed), Forward);
+	 --Control_Motor (Right_Motor_Id, Power_Percentage(Current_Speed), Forward);
+	 Control_Motor (Drive_Motor_Id, Power_Percentage(Current_Speed), Forward);
+      elsif (Current_Speed < 0) then
+	 --Control_Motor (Left_Motor_Id, Power_Percentage(Current_Speed*(-1)), Backward);
+	 Control_Motor (Drive_Motor_Id, Power_Percentage(Current_Speed*(-1)), Backward);
       else 
 	 --Control_Motor (Left_Motor_Id, Power_Percentage(0), Brake);
 	 --Control_Motor (Right_Motor_Id, Power_Percentage(0), Brake);
-	 Control_Motor (Drive_Motor_Id, Power_Percentage(Speed), Brake);
+	 Control_Motor (Drive_Motor_Id, Power_Percentage(Current_Speed), Brake);
       end if;
       
    end Command_Motors;
+   
+   
+   task body DistanceTask is
+      Next_Time : Time := Clock;
+      Period : Time_Span := milliseconds(100);
+      Sonic_Sensor: Ultrasonic_Sensor := Make(Sensor_3);
+      Reading: Natural;
+      Command: Driving_Command;
+   begin
+      loop
+	 Ping(Sonic_Sensor);
+	 Get_Distance(Sonic_Sensor, Reading);
+         Put_Noupdate(Reading);
+	 NewLine_Noupdate;
+	 Command := Driving_Command_Manager.Get_Driving_Command;
+	 if (Reading < 20 and (Command.Update_Priority < PRIO_DIST)) then
+	    Driving_Command_Manager.Change_Driving_Command(Milliseconds(1000), -50, PRIO_DIST);
+	 else
+	    Driving_Command_Manager.Change_Driving_Command(Milliseconds(1000), Integer(Reading/2), PRIO_DIST);
+	 end if;
+      	 Next_Time := Next_Time + Period;
+   	 delay until Next_Time;  
+      end loop;
+   end DistanceTask;
    
    task body ShutdownTask is 
       Next_Time : Time := Clock;
@@ -104,6 +141,8 @@ package body Tasks is
 	 delay until Next_Time;
       end loop;
    end ShutdownTask;
+   
+ 
 
    task body MotorControlTask is
       Next_Time : Time := Clock;
