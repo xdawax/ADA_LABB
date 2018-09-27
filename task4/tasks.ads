@@ -35,8 +35,7 @@ package Tasks is
    
    PRIO_IDLE: Integer := 1;
    PRIO_DIST: Integer := 2;
+   PRIO_LIGHT: Integer := 2;
    PRIO_BUTTON: Integer := 3;
-
-
 
 end Tasks;
