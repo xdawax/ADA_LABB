@@ -20,10 +20,8 @@ package Tasks is
    --  Definition of used ports  --
    --------------------------------
       
-      Drive_Motor_ID : constant Motor_Id := Motor_B;
-      Steer_Motor_ID : constant Motor_Id := Motor_C;
-   --Right_Motor_Id : constant Motor_Id := Motor_A;
-   --Left_Motor_Id : constant Motor_Id := Motor_C;
+   Right_Motor_Id : constant Motor_Id := Motor_B;
+   Left_Motor_Id : constant Motor_Id := Motor_A;
 
    ----------------------------------
    --  Definition of motors speed  --
@@ -37,5 +35,8 @@ package Tasks is
    PRIO_DIST: Integer := 2;
    PRIO_LIGHT: Integer := 2;
    PRIO_BUTTON: Integer := 3;
+   PRIO_STOP: Integer := 4;
+   
+   No_Value: Integer := -1;
 
 end Tasks;

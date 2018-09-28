@@ -46,6 +46,9 @@ package body Tasks is
 				       Update_Turn_Speed: in Integer; 
 				       Update_Priority: in Integer);
       function Get_Driving_Command return Driving_Command;
+      procedure Change_Speed(Update_Speed: Integer);
+      procedure Change_Turn(Update_Turn: Integer);
+      
    private
       Command: Driving_Command := (Milliseconds(0), 0, 0, PRIO_IDLE);
 
@@ -60,6 +63,16 @@ package body Tasks is
 	 Command := (Update_Duration, Update_Drive_Speed, Update_Turn_Speed, Update_Priority);
       end Change_Driving_Command;
       
+      procedure Change_Speed(Update_Speed: Integer) is
+      begin
+	 Command.Drive_Speed := Update_Speed;
+      end Change_Speed;
+      
+      procedure Change_Turn(Update_Turn: Integer) is
+      begin
+	 Command.Turn_Speed := Update_Turn;
+      end Change_Turn;
+      
       function Get_Driving_Command return Driving_Command is
       begin
 	 return Command;
@@ -72,12 +85,12 @@ package body Tasks is
    task MotorControlTask is
       -- define its priority higher than the main procedure --
       pragma Priority (System.Priority'First + 4);
-      pragma Storage_Size (2048); --  task memory allocation --
+      pragma Storage_Size (1024); --  task memory allocation --
    end MotorControlTask; 
    
    task DisplayTask is 
       pragma Priority (System.Priority'First + 2);
-      pragma Storage_Size (2048); --  task memory allocation --
+      pragma Storage_Size (1024); --  task memory allocation --
    end DisplayTask;
    
    task ShutdownTask is 
@@ -111,10 +124,10 @@ package body Tasks is
    --     end if;
    --  end abs;
    
-   procedure Command_Motors(Speed: Integer; Motor: Motor_Id) is 
-  Current_Speed: Integer;
-  Limit: Integer := 70;
-  begin
+   procedure Command_Motors(Motor: Motor_Id; Speed: Integer) is 
+      Current_Speed: Integer;
+      Limit: Integer := 40;
+   begin
      Current_Speed := Speed;
      
      if (abs(Current_Speed) > Limit) then
@@ -128,16 +141,16 @@ package body Tasks is
      if (Current_Speed > 0) then
 	Control_Motor (Motor, Power_Percentage(Current_Speed), Forward);
      elsif (Current_Speed < 0) then
-	Control_Motor (Motor, Power_Percentage(Current_Speed*(-1)), Backward);
+	Control_Motor (Motor, Power_Percentage(Current_Speed*(-1)), Backward);     
      else 
 	Control_Motor (Motor, Power_Percentage(Current_Speed), Brake);
      end if;
      
-  end Command_Motors;
-  
-  procedure Calc_Control(Input: in Integer; 
-			 Output: out Integer;
-			 Fy: in out Controller) is
+   end Command_Motors;
+   
+   procedure Calc_Control(Input: in Integer; 
+			  Output: out Integer;
+			  Fy: in out Controller) is
       Error: Integer;
       Derivative: Integer;
    begin
@@ -182,40 +195,51 @@ package body Tasks is
       White_Edge: Integer := 50;
       Black_Edge: Integer := 30;
       Reference: Integer := (White_Edge + Black_Edge)/2;
-      Light_Controller: Controller := (Reference, 2, 0, 1, 0, 0);
+      Light_Controller: Controller := (Reference, 1000, 10, 1000, 0, 0);
       Control_Signal: Integer;
       Reading: Integer;
       Command: Driving_Command;
+      Last_Control: Integer := 0;
+      Verbose: Boolean := True;
    begin
       loop
-	 Reading := Ls.Light_Value;
-	 --  Put_Noupdate("Light Value is: ");
-	 --  Put_Noupdate(Reading);
-	 --  NewLine_Noupdate;
-	 --  Put_Noupdate("Reference is: ");
-	 --  Put_Noupdate(Light_Controller.Reference);
-	 --  NewLine_Noupdate;
 	 
 	 if NXT.AVR.Button = Right_Button then 
 	    White_Edge := Ls.Light_Value; 
 	    Light_Controller.Reference := (White_Edge + Black_Edge)/2; 
+	    Light_Controller.Integral := 0;
+	    Light_Controller.Last_Error := 0;
 	 elsif NXT.AVR.Button = Left_Button then
 	    Black_Edge := Ls.Light_Value;
-	    Light_Controller.Reference := (White_Edge + Black_Edge)/2; 
+	    Light_Controller.Reference := (White_Edge + Black_Edge)/2;
+	    Light_Controller.Integral := 0;
+	    Light_Controller.Last_Error := 0;
 	 end if;
 	 
+	 Reading := Ls.Light_Value;
 	 Calc_Control(Reading, Control_Signal, Light_Controller);
 	 
-	 Put_Noupdate("LightControl: ");
-	 Put_Noupdate(Control_Signal);
-	 NewLine_Noupdate;
+	 Control_Signal := Control_Signal/100;
 	 
+	 if (Verbose) then
+	    Put_Noupdate("Light: ");
+	    Put_Noupdate(Reading);
+	    NewLine_Noupdate;
+	    Put_Noupdate("R_Light: ");
+	    Put_Noupdate(Light_Controller.Reference);
+	    NewLine_Noupdate;
+	    
+	    Put_Noupdate("U_Light: ");
+	    Put_Noupdate(Control_Signal);
+	    NewLine_Noupdate;
+	 end if;
+
+	 --if (Last_Control /= Control_Signal) then
 	 Command := Driving_Command_Manager.Get_Driving_Command;
-	 if (Command.Update_Priority <= PRIO_DIST) then
-	    Driving_Command_Manager.Change_Driving_Command(Milliseconds(1000), 20, (Control_Signal), PRIO_DIST);
-	    null;
-	 end if;	 
-	 
+	 if (Command.Update_Priority <= PRIO_LIGHT) then
+	    Driving_Command_Manager.Change_Turn(Control_Signal);
+	 end if;
+	 --end if;
 	 Next_Time := Next_Time + Period;
 	 delay until Next_Time;  
       end loop;
@@ -230,8 +254,10 @@ package body Tasks is
       Command: Driving_Command;
       Reference: Integer := 20;
       Base_Speed: Integer := 20;
-      Distance_Controller: Controller := (Reference, 5, 0, 1, 0, 0);
+      Distance_Controller: Controller := (Reference, 2, 0, 20, 0, 0);
       Control_Signal: Integer;
+      Verbose: Boolean := True;
+      Last_Control: Integer := 0;
    begin
       loop
 	 Ping(Sonic_Sensor);
@@ -239,17 +265,29 @@ package body Tasks is
 	 
 	 Calc_Control(Reading, Control_Signal, Distance_Controller);
 	 
-	 --Put_Noupdate("Sonic Reading: ");
-	 --Put_Noupdate(Reading);
-	 --NewLine_Noupdate;
-	 --Put_Noupdate("Control: ");
-	 --Put_Noupdate(Control_Signal);
-	 --NewLine_Noupdate;
+	 Control_Signal := Control_Signal;
+	 
+	 if (Control_Signal > 50) then
+	    Control_Signal := 50;
+	 elsif (Control_Signal < -50) then
+	    Control_Signal := -50;
+	 end if;
+	 
+	   if (Verbose) then
+	    Put_Noupdate("Sonic: ");
+	    Put_Noupdate(Reading);
+	    NewLine_Noupdate;
+	    Put_Noupdate("U_Sonic: ");
+	    Put_Noupdate(Control_Signal);
+	    NewLine_Noupdate;
+	 end if;
 
-	 Command := Driving_Command_Manager.Get_Driving_Command;
-	 if (Command.Update_Priority <= PRIO_DIST) then
-	    --Driving_Command_Manager.Change_Driving_Command(Milliseconds(1000), (Control_Signal), 0, PRIO_DIST);
-	    null;
+	 if (Last_Control /= Control_Signal) then
+		 Command := Driving_Command_Manager.Get_Driving_Command;
+		 if (Command.Update_Priority <= PRIO_DIST) then
+		    Driving_Command_Manager.Change_Speed(Control_Signal);
+		 end if;
+		 Last_Control := Control_Signal;
 	 end if;
 	 
 	 Next_Time := Next_Time + Period;
@@ -261,82 +299,86 @@ package body Tasks is
    task body ShutdownTask is 
       Next_Time : Time := Clock;
       Period : Time_Span := milliseconds(500);
+      Motor_Stop: Boolean := False;
+      Command: Driving_Command;
    begin
       loop
-
+	 
+	 if (Motor_Stop) then
+	    Motor_Stop := False;
+	    Put_Noupdate("Motor Start!");
+	    NewLine_Noupdate;
+	    Command := Driving_Command_Manager.Get_Driving_Command;
+	    if (Command.Update_Priority <= PRIO_STOP) then
+	       Driving_Command_Manager.Change_Driving_Command(Milliseconds(1000), 
+							      0, 
+							      0, PRIO_IDLE);
+	    end if;
+	 end if;
+	 
+	 
 	 if NXT.AVR.Button = Power_Button then
 	    NXT.AVR.Power_Down;
-	 end if;
-	 Next_Time := Next_Time + Period;
+	 end if; 
+	 
+	 if (NXT.AVR.Button = Middle_Button) then
+	    Motor_Stop := True;
+	    Put_Noupdate("Motor Stop!");
+	    NewLine_Noupdate;
+	    Next_Time := Next_Time + Milliseconds(5000);
+	    Command := Driving_Command_Manager.Get_Driving_Command;
+	    if (Command.Update_Priority <= PRIO_STOP) then
+	       Driving_Command_Manager.Change_Driving_Command(Milliseconds(1000), 
+							      0, 
+							      0, PRIO_STOP);
+	    end if;
+	 else 
+	    Next_Time := Next_Time + Period;
+	 end if; 
+	 
 	 delay until Next_Time;
-      end loop;
-   end ShutdownTask;
+   end loop;
+end ShutdownTask;
    
- 
+   
 
    task body MotorControlTask is
       Next_Time : Time := Clock;
       Period : Time_Span := milliseconds(50);
       Command: Driving_Command;
       Speed: Integer := 0;
+      Turn: Integer := 0; 
       Duration: Time_Span := Milliseconds(0);
       Started: Boolean := False;
-      Turn_Count: Integer;
-      Turn_Limit: Integer := 10;
-      Reference: Integer := 0;
-      Control_Signal: Integer;
-      Bumper: Touch_Sensor (Sensor_4);
-      Turn_Controller: Controller := (Reference, 10, 100, 10, 0, 0);
-   begin      
+      Current_Priority: Integer := PRIO_IDLE;
+      Verbose: Boolean := True;
+   begin     
       loop
 	 
 	 Command := Driving_Command_Manager.Get_Driving_Command;
-	 --Put_Noupdate("Starting motors...");
-	 --NewLine_Noupdate;
-	 Command_Motors(Command.Drive_Speed, Drive_Motor_ID);	 
 	 
-	 Reference := Command.Turn_Speed;
-
-	 if (abs(Reference) > Turn_Limit) then
-	    if (Reference  > Turn_Limit) then 
-	       Reference := Turn_Limit;
-	    elsif (Reference < -Turn_Limit) then
-	       Reference := -Turn_Limit;
-	    end if;
-	    Turn_Controller.Reference := Reference;
-	 end if;	 
-	   
-	 Turn_Count := NXT.Motor_Encoders.Encoder_Count (Steer_Motor_ID);
+	 if (Command.Drive_Speed /= No_Value) then
+	    Speed := Command.Drive_Speed;
+	    Put_Noupdate("Base Speed: ");
+	    Put_Noupdate(Speed);
+	    NewLine_Noupdate;
+	 end if;
 	 
-	 Calc_Control(Turn_Count, Control_Signal, Turn_Controller);
+	 if (Command.Turn_Speed /= No_Value) then
+	    Turn := Command.Turn_Speed;
+	 end if;
 	 
-	 Control_Signal := Control_Signal / 1000;
+	 if (Verbose) then
+	    Put_Noupdate("Left Speed: ");
+	    Put_Noupdate(Speed - Turn);
+	    NewLine_Noupdate;
+	    Put_Noupdate("Right Speed: ");
+	    Put_Noupdate(Speed + Turn);
+	    NewLine_Noupdate;
+	 end if;
 	 
-	 --Put_Noupdate("Encoder: ");
-	 --Put_Noupdate (Turn_Count); 
-	 --Newline_Noupdate;
-	 Put_Noupdate("TurnControl: ");
-	 Put_Noupdate(Control_Signal);
-	 Newline_Noupdate;
-	 
-	 
-	 
-	 Command_Motors(-Control_Signal, Steer_Motor_ID);
-	 
-	 --  if abs(Turn_Count) < Turn_Limit then
-	 -- Command_Motors(Command.Turn_Speed, Steer_Motor_ID);
-	 --else 
-	 --Command_Motors(0, Steer_Motor_ID);
-	 --end if;
-	 --  if (Turn_Count > 0) and (Command.Turn_Speed < 0) then
-	 --     Command_Motors(Command.Turn_Speed, Steer_Motor_ID);
-	 --  elsif (Turn_Count < 0) and (Command.Turn_Speed > 0) then
-	 --     Command_Motors(Command.Turn_Speed, Steer_Motor_ID);
-	 --  else 
-	 --     Command_Motors(0, Steer_Motor_ID);
-	 --  end if;
-	 
-
+	 Command_Motors(Left_Motor_Id, Speed - Turn); 
+	 Command_Motors(Right_Motor_Id, Speed + Turn);
 	 
 	 Next_Time := Next_Time + Period;
 	 delay until Next_Time;
