@@ -17,7 +17,7 @@ package Tasks is
 
     type Driving_Command is record 
         Driving_Duration: Time_Span;
-        Car_Speed: PWM_Value;
+        Speed: PWM_Value;
         Update_Priority: Integer;
     end record;
 
@@ -27,18 +27,24 @@ package Tasks is
     PRIO_DIST: Integer := 2;
     PRIO_BUTTON: Integer := 3;
 
+    -- Task Priorities
+    Motor_Priority:     Integer := 2;
+    Button_Priority:    Integer := 1;
+    Display_Priority:   Integer := 0;
+    Distance_Priority:  Integer := 5;
+    ShutDown_Priority:  Integer := 10;
 
    --  Define periods and times  --
-    MotorControlPeriod: Time_Span := milliseconds(50);
-    ButtonPeriod: Time_Span := milliseconds(10);
-    DisplayPeriod: Time_Span := milliseconds(100);
+    MotorPeriod:    Time_Span := milliseconds(50);
+    ButtonPeriod:   Time_Span := milliseconds(10);
+    DisplayPeriod:  Time_Span := milliseconds(100);
     DistancePeriod: Time_Span := milliseconds(100);
     ShutdownPeriod: Time_Span := milliseconds(500);
 
    --  Define used sensor ports  --
     Bumper: Touch_Sensor (Sensor_2);
-    -- Sonar : Ultrasonic_Sensor := Make (Sensor_3);
-   --  Init sensors --
+    Sonar : Ultrasonic_Sensor := Make (Sensor_3);
+    --  Init sensors --
 
     -- Engines --
     Engine_Left: Simple_Motor := Make (Motor_A);
