@@ -25,7 +25,7 @@ package body Tasks is
     end Background;
 
     protected CommandCenter is 
-        -- entry Wait(Command_Out : Out Command_Type);
+        entry Wait(Command_Out : Out Command_Type);
         function Get_Command return Command_Type;
         procedure Signal (
             New_Prio: in Integer;
@@ -46,11 +46,11 @@ package body Tasks is
     end CommandCenter;
 
     protected body CommandCenter is 
-        -- entry Wait(Command_Out : out Command_Type) when Signalled is
-        -- begin
-        --     Command_Out := Command;
-        --     Signalled := False;
-        -- end Wait;
+        entry Wait(Command_Out : out Command_Type) when Signalled is
+        begin
+            Command_Out := Command;
+            Signalled := False;
+        end Wait;
 
         function Get_Command return Command_Type is 
         begin 
@@ -83,6 +83,7 @@ package body Tasks is
         procedure Set_Idle is 
         begin 
             Command.Prio := PRIO_IDLE;
+            Signalled := True;
         end Set_Idle;
 
     end CommandCenter;
@@ -90,13 +91,23 @@ package body Tasks is
     procedure Set_Motor(Power : in Integer; Engine_Id : in Motor_Id) is 
         Engine:  Simple_Motor := Make (Engine_Id);
     begin
-        if (Power >= 0) then 
+        if (Power > 100) then 
+            Engine.Set_Power(100);
+            Engine.Forward;
+        elsif (Power < -100) then 
+            Engine.Set_Power(100);
+            Engine.Backward;
+        else 
+            if (Power > 0) then 
                 Engine.Set_Power(Power_Percentage(Power));
                 Engine.Forward;
             elsif (Power < 0) then 
                 Engine.Set_Power(Power_Percentage((-1)*Power));
                 Engine.Backward;
+            else
+                Engine.Stop (Apply_Brake => True);
             end if;
+        end if;
     end Set_Motor;
 
     task MotorTask is
@@ -106,6 +117,7 @@ package body Tasks is
 
     task body MotorTask is
         New_Command: Command_Type;
+        Extra_Left_Power: Integer := 130; -- Compensate for left engine beeing weeker
     begin
         loop 
             -- CommandCenter.Wait(New_Command);
@@ -114,7 +126,7 @@ package body Tasks is
                 -- Put_Noupdate("Inside MotorTask");
                 -- Newline;
                 if (New_Command.Duration >= milliseconds(0)) then 
-                    Set_Motor(New_Command.Power_L, Engine_Left.id);
+                    Set_Motor((New_Command.Power_L*Extra_Left_Power)/100, Engine_Left.id);
                     Set_Motor(New_Command.Power_R, Engine_Right.id);
                 else 
                     CommandCenter.Set_Idle;
@@ -129,6 +141,47 @@ package body Tasks is
         end loop;
     end MotorTask;
 
+    task LightTask is 
+        pragma Priority(System.Priority'First + Light_Priority);
+        pragma Storage_Size(1024); 
+    end LightTask; 
+    
+    task body LightTask is 
+        Reference: Integer := 35;
+        Power_L: Integer;
+        Power_R: Integer;
+        Base_Power: Integer := 30;
+        Error: Integer;
+        Last_Error: Integer := 0;
+        Integral: Integer := 0;
+        Kp: Integer := 50;
+        Ki: Integer := 0;
+        Kd: Integer := 0;
+    begin 
+        loop 
+
+            -- Difference_Power := Kp*(Reference-Photo.Light_Value);
+            Put_Noupdate("L: ");
+            Put_Noupdate(Photo.Light_Value);
+            Newline_Noupdate;
+            Error := (Reference - Photo.Light_Value);
+            Put_Noupdate("E: ");
+            Put_Noupdate(Error);
+            Newline;
+            Integral := Integral + Error;
+            Power_L := Base_Power + ((Kp*Error)/100 + (Ki*Integral)/100 + (Kd*(Error - Last_Error))/100);
+            Power_R := Base_Power - ((Kp*Error)/100 + (Ki*Integral)/100 + (Kd*(Error - Last_Error))/100);
+            CommandCenter.Signal(PRIO_LIGHT, milliseconds(100), Power_L, Power_R);
+            --   if (Photo.Light_Value < Reference) then 
+            --     CommandCenter.Signal(PRIO_LIGHT, milliseconds(40), 40, 20);
+            -- else 
+            --     CommandCenter.Signal(PRIO_LIGHT, milliseconds(40), 20, 40);
+            -- end if;
+            Last_Error := Error;
+
+            delay until Clock + LightPeriod;
+        end loop;
+    end LightTask;
 
     task DistanceTask is 
         pragma Priority(System.Priority'First + Distance_Priority);
@@ -151,10 +204,10 @@ package body Tasks is
             if (Distance < 20) then 
                 CommandCenter.Signal(PRIO_DIST, milliseconds(100), New_Speed, New_Speed);
             end if;
-            Put_Noupdate(Distance);
+            -- Put_Noupdate(Distance);
             -- Put_Noupdate(" ");
             -- Put_Noupdate(New_Speed);
-            Newline;
+            -- Newline;
             delay until Clock + DistancePeriod;
         end loop;
     end DistanceTask;

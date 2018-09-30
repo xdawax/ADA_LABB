@@ -33,14 +33,15 @@ package Tasks is
 
     -- Task Priorities --
 
-    Distance_Priority:  constant Integer := 3;
+    Distance_Priority:  constant Integer := 1;
     Light_Priority:     constant Integer := 2;
-    Motor_Priority:     constant Integer := 1;
+    Motor_Priority:     constant Integer := 3;
     ShutDown_Priority:  constant Integer := 10;
 
    --  Define periods and times  --
-    MotorPeriod:    constant Time_Span := milliseconds(50);
     DistancePeriod: constant Time_Span := milliseconds(100);
+    LightPeriod:    constant Time_Span := milliseconds(70);
+    MotorPeriod:    constant Time_Span := milliseconds(50);
     ShutdownPeriod: constant Time_Span := milliseconds(500);
 
    --  Define used sensor ports  --
