@@ -17,10 +17,11 @@ package Tasks is
 
    private
 
-    type Driving_Command is record 
-        Driving_Duration: Time_Span;
-        Speed: PWM_Value;
-        Update_Priority: Integer;
+    type Command_Type is record 
+        Prio: Integer;
+        Duration: Time_Span;
+        Power_L: Integer; 
+        Power_R: Integer;
     end record;
 
 

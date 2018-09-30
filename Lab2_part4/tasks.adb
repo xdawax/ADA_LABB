@@ -22,43 +22,56 @@ package body Tasks is
     end Background;
 
     protected CommandCenter is 
-        procedure Change_Driving_Command(
+        entry Wait(Command_Out : Out Command_Type);
+        procedure Signal (
+            New_Prio: in Integer;
             New_Duration: in Time_Span;
-            New_Speed: in PWM_Value;
-            New_Prio: in Integer
+            New_Power_L: in Integer;
+            New_Power_R: in Integer
         );
-        function Get_Driving_Command return Driving_Command;
-        function Get_Update_Priority return Integer;
+        procedure Set_Duration(New_Duration : in Time_Span);
+        procedure Set_Idle;
      private 
-        Drive: Driving_Command := (
-            Driving_Duration => milliseconds(0),
-            Speed => 0,
-            Update_Priority => PRIO_IDLE
+        Command: Command_Type := (
+            Prio => PRIO_IDLE,
+            Duration => milliseconds(0),
+            Power_L => 0,
+            Power_R => 0
         );
+        Signalled: Boolean := False;
     end CommandCenter;
 
     protected body CommandCenter is 
-        procedure Change_Driving_Command(
+        entry Wait(Command_Out : out Command_Type) when Signalled is
+        begin
+            Command_Out := Command;
+            Signalled := False;
+        end Wait;
+
+        procedure Signal(
+            New_Prio: in Integer;
             New_Duration: in Time_Span;
-            New_Speed: in PWM_Value;
-            New_Prio: in Integer
-        ) is
+            New_Power_L: in Integer;
+            New_Power_R: in Integer) is
+        begin
+            if (Command.Prio >= New_Prio) then 
+                Command.Prio := New_Prio;
+                Command.Duration := New_Duration;
+                Command.Power_L := New_Power_L;
+                Command.Power_R := New_Power_R; 
+                Signalled := True;
+            end if;
+        end Signal;
 
+        procedure Set_Duration(New_Duration : in Time_Span) is 
         begin 
-            Drive.Driving_Duration := New_Duration;
-            Drive.Speed := New_Speed;
-            Drive.Update_Priority := New_Prio;
-        end Change_Driving_Command;
+            Command.Duration := New_Duration;
+        end Set_Duration;
 
-        function Get_Driving_Command return Driving_Command is 
+        procedure Set_Idle is 
         begin 
-            return Drive;
-        end Get_Driving_Command;
-
-        function Get_Update_Priority return Integer is 
-        begin 
-            return Drive.Update_Priority;
-        end Get_Update_Priority;
+            Command.Prio := PRIO_IDLE;
+        end Set_Idle;
 
     end CommandCenter;
 
