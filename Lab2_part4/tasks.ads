@@ -33,9 +33,9 @@ package Tasks is
 
     -- Task Priorities --
 
-    Distance_Priority:  constant Integer := 1;
+    Distance_Priority:  constant Integer := 3;
     Light_Priority:     constant Integer := 2;
-    Motor_Priority:     constant Integer := 3;
+    Motor_Priority:     constant Integer := 1;
     ShutDown_Priority:  constant Integer := 10;
 
    --  Define periods and times  --
