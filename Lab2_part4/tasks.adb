@@ -117,7 +117,7 @@ package body Tasks is
 
     task body MotorTask is
         New_Command: Command_Type;
-        Extra_Left_Power: Integer := 130; -- Compensate for left engine beeing weeker
+        Extra_Left_Power: Integer := 170; -- Compensate for left engine beeing weeker
     begin
         loop 
             -- CommandCenter.Wait(New_Command);
@@ -154,13 +154,13 @@ package body Tasks is
         Error: Integer;
         Last_Error: Integer := 0;
         Integral: Integer := 0;
-        Kp: Integer := 50;
+        Integral_Limit: Integer := 30;
+        Kp: Integer := 200;
         Ki: Integer := 0;
-        Kd: Integer := 0;
+        Kd: Integer := 20;
     begin 
         loop 
 
-            -- Difference_Power := Kp*(Reference-Photo.Light_Value);
             Put_Noupdate("L: ");
             Put_Noupdate(Photo.Light_Value);
             Newline_Noupdate;
@@ -169,15 +169,19 @@ package body Tasks is
             Put_Noupdate(Error);
             Newline;
             Integral := Integral + Error;
+            
+            if (Integral > Integral_Limit) then 
+                Integral := Integral_Limit;
+            elsif (Integral < -Integral_Limit) then 
+                Integral := -Integral_Limit;
+            end if;
+
             Power_L := Base_Power + ((Kp*Error)/100 + (Ki*Integral)/100 + (Kd*(Error - Last_Error))/100);
             Power_R := Base_Power - ((Kp*Error)/100 + (Ki*Integral)/100 + (Kd*(Error - Last_Error))/100);
             CommandCenter.Signal(PRIO_LIGHT, milliseconds(100), Power_L, Power_R);
-            --   if (Photo.Light_Value < Reference) then 
-            --     CommandCenter.Signal(PRIO_LIGHT, milliseconds(40), 40, 20);
-            -- else 
-            --     CommandCenter.Signal(PRIO_LIGHT, milliseconds(40), 20, 40);
-            -- end if;
+            -- CommandCenter.Signal(PRIO_LIGHT, milliseconds(100), 40, 40);
             Last_Error := Error;
+            
 
             delay until Clock + LightPeriod;
         end loop;

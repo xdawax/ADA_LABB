@@ -40,7 +40,7 @@ package Tasks is
 
    --  Define periods and times  --
     DistancePeriod: constant Time_Span := milliseconds(100);
-    LightPeriod:    constant Time_Span := milliseconds(70);
+    LightPeriod:    constant Time_Span := milliseconds(30);
     MotorPeriod:    constant Time_Span := milliseconds(50);
     ShutdownPeriod: constant Time_Span := milliseconds(500);
 
