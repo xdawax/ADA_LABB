@@ -16,8 +16,8 @@ package Events is
    ----------------------------------
    --            Event IDs         --
    ----------------------------------
-    TouchOnEvent: Integer := 1;
-    TouchOffEvent: Integer := 2;
-    LightBelowEvent: Integer := 3;
-    LightAboveEvent: Integer := 4;
+    TouchOnEvent: Integer := 1; --Event to signal bumper is pressed
+    TouchOffEvent: Integer := 2; --Event to signal bumper is released
+    LightBelowEvent: Integer := 3; --Event to signal light levels are below threshold
+    LightAboveEvent: Integer := 4; --Event to signal light levels are above threshold
 end Events;

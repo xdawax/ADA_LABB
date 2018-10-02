@@ -90,16 +90,16 @@ package body Tasks is
       end if;
       
       if (Current_Speed > 0) then
-	 --Control_Motor (Left_Motor_Id, Power_Percentage(Current_Speed), Forward);
-	 --Control_Motor (Right_Motor_Id, Power_Percentage(Current_Speed), Forward);
-	 Control_Motor (Drive_Motor_Id, Power_Percentage(Current_Speed), Forward);
+	 Control_Motor (Left_Motor_Id, Power_Percentage(Current_Speed), Forward);
+	 Control_Motor (Right_Motor_Id, Power_Percentage(Current_Speed), Forward);
+	 --Control_Motor (Drive_Motor_Id, Power_Percentage(Current_Speed), Forward);
       elsif (Current_Speed < 0) then
 	 --Control_Motor (Left_Motor_Id, Power_Percentage(Current_Speed*(-1)), Backward);
 	 Control_Motor (Drive_Motor_Id, Power_Percentage(Current_Speed*(-1)), Backward);
       else 
-	 --Control_Motor (Left_Motor_Id, Power_Percentage(0), Brake);
-	 --Control_Motor (Right_Motor_Id, Power_Percentage(0), Brake);
-	 Control_Motor (Drive_Motor_Id, Power_Percentage(Current_Speed), Brake);
+	 Control_Motor (Left_Motor_Id, Power_Percentage(0), Brake);
+	 Control_Motor (Right_Motor_Id, Power_Percentage(0), Brake);
+	 --Control_Motor (Drive_Motor_Id, Power_Percentage(Current_Speed), Brake);
       end if;
       
    end Command_Motors;
@@ -118,7 +118,7 @@ package body Tasks is
          Put_Noupdate(Reading);
 	 NewLine_Noupdate;
 	 Command := Driving_Command_Manager.Get_Driving_Command;
-	 if (Reading < 20 and (Command.Update_Priority < PRIO_DIST)) then
+	 if (Reading < 20 and (Command.Update_Priority < PRIO_DIST)) then --Check that our priority is higher than the current update priority
 	    Driving_Command_Manager.Change_Driving_Command(Milliseconds(1000), -50, PRIO_DIST);
 	 else
 	    Driving_Command_Manager.Change_Driving_Command(Milliseconds(1000), Integer(Reading/2), PRIO_DIST);
@@ -154,7 +154,7 @@ package body Tasks is
    begin      
       loop
 	 
-	 if ( not Started) then
+	 if (not Started) then
 	    Command := Driving_Command_Manager.Get_Driving_Command;
 	    if ((Command.Update_Priority > PRIO_IDLE) and (Command.Duration > Milliseconds(0))) then
 	       Started := True;

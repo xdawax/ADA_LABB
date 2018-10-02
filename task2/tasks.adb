@@ -44,6 +44,7 @@ package body Tasks is
 	 
 	 Event.Wait(Event_ID);
 	 
+   -- Check which event was received and react accordingly.
 	 if ((Event_ID = TouchOnEvent) and (!Edge_Reset)) then
 	     put_noupdate("TouchOnEvent");
 	    Control_Motor (Left_Motor_Id, Speed_Half, Forward);
@@ -71,6 +72,7 @@ package body Tasks is
    end EventDispatcherTask;
 
 
+   -- Task to read sensor input and dispatch events
    task body EventDispatcherTask is
       Next_Time : Time := Clock;
       Period : Time_Span := milliseconds(100);
@@ -81,6 +83,7 @@ package body Tasks is
       Last_Light_Value: Integer := LS.Light_Value;
       Threshold: Integer := 30;
       
+      -- Utility function for checking bumper input
       procedure Check_Bumper is
       begin
       	 if Pressed (Bumper) then
@@ -103,11 +106,13 @@ package body Tasks is
             Last_Bumper_State := Pressed(Bumper);
       	 end if;
       end Check_Bumper;
-      
+
+       -- Utility function for checking light sensor input
       procedure Check_Light_Sensor is
 	 Difference: Integer := 0;
+   Offset: Integer := 5; --Since signal is fairly noisy, use a threshold to check changed
       begin
-	 if LS.Light_Value < Threshold then
+	 if LS.Light_Value < Threshold then --Alarm for signaling we are at edge of table
 	    NXT.Audio.Play_Tone
 	      (Frequency => 900,
 	       Interval  => 10,
@@ -120,13 +125,13 @@ package body Tasks is
 	    Difference := Difference * (-1);
 	 end if;
 	 
-	 if (Difference > 5) then
+	 if (Difference > Offset) then
             if LS.Light_Value < Threshold then
 	       put_noupdate("Over the edge!");
 	       Newline;
 	       Event.Signal(LightBelowEvent);
             else
-	       put_noupdate("Light levels OK.");
+	       put_noupdate("Light levels OK."); --Back on the table
 	       Newline;
 	       Event.Signal(LightAboveEvent);
             end if;

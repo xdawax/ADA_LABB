@@ -20,10 +20,10 @@ package Tasks is
    --  Definition of used ports  --
    --------------------------------
       
-      Drive_Motor_ID : constant Motor_Id := Motor_B;
-      Steer_Motor_ID : constant Motor_Id := Motor_C;
-   --Right_Motor_Id : constant Motor_Id := Motor_A;
-   --Left_Motor_Id : constant Motor_Id := Motor_C;
+      --Drive_Motor_ID : constant Motor_Id := Motor_B;
+      --Steer_Motor_ID : constant Motor_Id := Motor_C;
+   Right_Motor_Id : constant Motor_Id := Motor_A;
+   Left_Motor_Id : constant Motor_Id := Motor_C;
 
    ----------------------------------
    --  Definition of motors speed  --

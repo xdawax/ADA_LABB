@@ -40,11 +40,11 @@ package body Tasks is
 	 Integral: Integer;
       end record;
    
-   protected Driving_Command_Manager is
+   protected Driving_Command_Manager is --Protected type to store the driving command
       procedure Change_Driving_Command(Update_Duration: in Time_Span; 
 				       Update_Drive_Speed: in Integer; 
 				       Update_Turn_Speed: in Integer; 
-				       Update_Priority: in Integer);
+				       Update_Priority: in Integer); --Note that, in this task the priorities are not actually used
       function Get_Driving_Command return Driving_Command;
       procedure Change_Speed(Update_Speed: Integer);
       procedure Change_Turn(Update_Turn: Integer);
@@ -113,24 +113,14 @@ package body Tasks is
       pragma Storage_Size (1024); --  task memory allocation --
    end StartupTask;
    
-   --  function abs(Value: Integer) is
-   --  begin
-   --     if (Value > 0) then
-   --  	 return Value;
-   --     elsif (Value < 0) then
-   --  	 return Value  * (-1);
-   --     else 
-   --  	 return 0;
-   --     end if;
-   --  end abs;
-   
+   --Utility function to set speed of motors
    procedure Command_Motors(Motor: Motor_Id; Speed: Integer) is 
       Current_Speed: Integer;
-      Limit: Integer := 40;
+      Limit: Integer := 50;
    begin
      Current_Speed := Speed;
      
-     if (abs(Current_Speed) > Limit) then
+     if (abs(Current_Speed) > Limit) then --Check if speed is outside bounds
 	if (Current_Speed > Limit) then 
 	   Current_Speed := Limit;
 	elsif (Current_Speed < -Limit) then
@@ -138,7 +128,7 @@ package body Tasks is
 	end if;
      end if;
 	
-     if (Current_Speed > 0) then
+     if (Current_Speed > 0) then -- Check if robot should go forward or backward
 	Control_Motor (Motor, Power_Percentage(Current_Speed), Forward);
      elsif (Current_Speed < 0) then
 	Control_Motor (Motor, Power_Percentage(Current_Speed*(-1)), Backward);     
@@ -148,6 +138,7 @@ package body Tasks is
      
    end Command_Motors;
    
+   --Utility function to calculate control signal based on PID formula.
    procedure Calc_Control(Input: in Integer; 
 			  Output: out Integer;
 			  Fy: in out Controller) is
@@ -203,7 +194,8 @@ package body Tasks is
       Verbose: Boolean := True;
    begin
       loop
-	 
+
+	 --Calibration, Right button sets white light level and left sets black light level.
 	 if NXT.AVR.Button = Right_Button then 
 	    White_Edge := Ls.Light_Value; 
 	    Light_Controller.Reference := (White_Edge + Black_Edge)/2; 
@@ -217,7 +209,7 @@ package body Tasks is
 	 end if;
 	 
 	 Reading := Ls.Light_Value;
-	 Calc_Control(Reading, Control_Signal, Light_Controller);
+	 Calc_Control(Reading, Control_Signal, Light_Controller); --Calculate control signal
 	 
 	 Control_Signal := Control_Signal/100;
 	 
@@ -234,12 +226,11 @@ package body Tasks is
 	    NewLine_Noupdate;
 	 end if;
 
-	 --if (Last_Control /= Control_Signal) then
 	 Command := Driving_Command_Manager.Get_Driving_Command;
 	 if (Command.Update_Priority <= PRIO_LIGHT) then
 	    Driving_Command_Manager.Change_Turn(Control_Signal);
 	 end if;
-	 --end if;
+
 	 Next_Time := Next_Time + Period;
 	 delay until Next_Time;  
       end loop;
@@ -263,11 +254,11 @@ package body Tasks is
 	 Ping(Sonic_Sensor);
 	 Get_Distance(Sonic_Sensor, Reading);
 	 
-	 Calc_Control(Reading, Control_Signal, Distance_Controller);
+	 Calc_Control(Reading, Control_Signal, Distance_Controller); -- Calculate control signal
 	 
 	 Control_Signal := Control_Signal;
 	 
-	 if (Control_Signal > 50) then
+	 if (Control_Signal > 50) then --Put a limit to the control signal so as not to go too fast
 	    Control_Signal := 50;
 	 elsif (Control_Signal < -50) then
 	    Control_Signal := -50;
@@ -357,17 +348,14 @@ end ShutdownTask;
 	 
 	 Command := Driving_Command_Manager.Get_Driving_Command;
 	 
-	 if (Command.Drive_Speed /= No_Value) then
-	    Speed := Command.Drive_Speed;
+
+	    Speed := Command.Drive_Speed; -- Set drive speed
 	    Put_Noupdate("Base Speed: ");
 	    Put_Noupdate(Speed);
 	    NewLine_Noupdate;
-	 end if;
-	 
-	 if (Command.Turn_Speed /= No_Value) then
-	    Turn := Command.Turn_Speed;
-	 end if;
-	 
+
+	    Turn := Command.Turn_Speed; -- Set turn speed
+
 	 if (Verbose) then
 	    Put_Noupdate("Left Speed: ");
 	    Put_Noupdate(Speed - Turn);
